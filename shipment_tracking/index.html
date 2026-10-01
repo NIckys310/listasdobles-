@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shipment Tracker | Doubly Linked List</title>
+<style>
+:root{--night:#0A1224;--panel:#111D36;--line:#243659;--text:#DCE6F5;--mute:#8396B8;--cyan:#38D6D0;--amber:#FFB020;--red:#FF5E5E;--green:#4ADE80;
+--ui:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;--mono:ui-monospace,Consolas,"SF Mono",Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 500px at 70% -10%,#16294d,var(--night));color:var(--text);font-family:var(--ui);min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between;align-items:center;padding:20px clamp(16px,4vw,48px);border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:clamp(1.4rem,3vw,2rem)} h1 span{color:var(--cyan)}
+header p{margin:4px 0 0;color:var(--mute)}
+.stats{display:flex;gap:8px;margin:0}
+.stats div{padding:6px 16px;border-left:2px solid var(--line)}
+.stats dt{font-size:.75rem;color:var(--mute);text-transform:uppercase;letter-spacing:.08em}
+.stats dd{margin:0;font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums}
+main{max-width:1300px;margin:0 auto;padding:20px clamp(16px,4vw,48px) 48px;display:grid;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{margin:0 0 12px;font-size:.8rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mute)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mode{padding:5px 12px;border-radius:999px;font-size:.8rem;font-weight:700;letter-spacing:.06em;border:1px solid var(--line)}
+.mode.fwd{color:var(--cyan);border-color:var(--cyan)} .mode.bwd{color:var(--amber);border-color:var(--amber)}
+.legend{font-size:.85rem;color:var(--mute);display:flex;gap:16px} .legend b.n{color:var(--cyan)} .legend b.p{color:var(--amber)}
+.view{overflow-x:auto;padding:70px 8px 10px;scroll-behavior:smooth}
+.route{display:flex;align-items:flex-start;min-width:max-content}
+.empty{color:var(--mute);padding:30px}
+.stop{position:relative;width:170px;background:#0E1A31;border:2px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center;cursor:pointer;transition:.25s}
+.stop:hover{border-color:var(--mute)}
+.stop .ico{font-size:2rem;line-height:1}
+.stop .nm{font-weight:700;margin:6px 0 2px;overflow-wrap:anywhere}
+.stop .id{font-family:var(--mono);font-size:.75rem;color:var(--mute)}
+.chip{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700}
+.on_time{background:rgba(74,222,128,.15);color:var(--green)} .delayed{background:rgba(255,176,32,.18);color:var(--amber)} .inspected{background:rgba(255,94,94,.18);color:var(--red)}
+.stop.cur{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(56,214,208,.18),0 10px 30px rgba(56,214,208,.2);transform:translateY(-4px)}
+.stop.cur.back{border-color:var(--amber);box-shadow:0 0 0 4px rgba(255,176,32,.18),0 10px 30px rgba(255,176,32,.2)}
+.tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--line);color:var(--text);font-size:.65rem;font-weight:700;padding:1px 8px;border-radius:999px;letter-spacing:.08em}
+.box{position:absolute;top:-62px;left:50%;margin-left:-22px;font-size:2.4rem;animation:bob 1.6s ease-in-out infinite;filter:drop-shadow(0 6px 6px #0008)}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.link{width:84px;flex:none;align-self:center;margin-top:-6px;font-family:var(--mono);font-size:.7rem;text-align:center}
+.link i{display:block;font-style:normal;line-height:1.7} .link .n{color:var(--cyan)} .link .p{color:var(--amber)}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.btn{background:#18284A;border:1px solid var(--line);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600;transition:.15s}
+.btn:hover{background:#21365F} .btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.go{background:var(--cyan);color:#052224;border-color:var(--cyan)}
+.btn.back{background:var(--amber);color:#2A1B00;border-color:var(--amber)}
+.btn.warn{border-color:var(--red);color:var(--red)}
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+label{display:block;font-size:.8rem;color:var(--mute);margin:8px 0 4px}
+input,select{width:100%;background:#0B162B;border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+dl.info{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+dl.info dt{color:var(--mute)} dl.info dd{margin:0;font-weight:600}
+.msg{margin-top:12px;padding:10px 12px;border-radius:8px;background:#0B162B;border-left:4px solid var(--cyan);min-height:42px}
+.msg.err{border-color:var(--red);color:#FFB4B4}
+.term{background:#050B17;border-radius:10px;padding:12px;font-family:var(--mono);font-size:.82rem;min-height:150px;max-height:210px;overflow:auto;white-space:pre-wrap;color:#9EE6B0}
+.term .pr{color:var(--cyan)}
+#loader{position:fixed;inset:0;background:var(--night);display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:9;text-align:center;padding:20px}
+#loader[hidden]{display:none}
+#spinner{width:42px;height:42px;border:4px solid var(--line);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="loader"><div id="spinner"></div><p id="loader-text">Loading Python in your browser...</p></div>
+<header>
+  <div><h1>📦 Global <span>Shipment Tracker</span></h1><p>Doubly linked list: audit a container forward and trace it backward</p></div>
+  <dl class="stats">
+    <div><dt>Checkpoints</dt><dd id="s-len">0</dd></div>
+    <div><dt>Position</dt><dd id="s-pos">-</dd></div>
+    <div><dt>Total delay</dt><dd id="s-delay">0 h</dd></div>
+  </dl>
+</header>
+<main>
+  <section class="card">
+    <div class="bar">
+      <h2>Route of container MSKU-48210</h2>
+      <span class="mode fwd" id="mode">FORWARD AUDIT</span>
+      <div class="legend"><span><b class="n">next →</b> towards destination</span><span><b class="p">← prev</b> towards origin</span></div>
+    </div>
+    <div class="view" id="view"><div class="route" id="route"></div></div>
+    <div class="ctrl">
+      <button class="btn back" id="b-prev">◀ Trace back (prev)</button>
+      <button class="btn go" id="b-next">Advance (next) ▶</button>
+      <button class="btn" id="b-head">⏮ Origin (head)</button>
+      <button class="btn" id="b-tail">Destination (tail) ⏭</button>
+      <button class="btn back" id="b-inv">🔎 Investigate delay</button>
+    </div>
+    <div class="msg" id="msg" role="status">Starting...</div>
+  </section>
+  <div class="grid">
+    <section class="card">
+      <h2>Add a checkpoint</h2>
+      <label for="f-name">Name</label><input id="f-name" maxlength="40" placeholder="e.g. Cartagena Port">
+      <label for="f-kind">Type</label>
+      <select id="f-kind"><option value="port">⚓ Port</option><option value="customs">🛃 Customs</option><option value="hub">🏭 Distribution center</option><option value="warehouse">📦 Warehouse</option><option value="destination">📍 Destination</option></select>
+      <label for="f-index">Position (only for insert)</label><input id="f-index" type="number" min="0" value="1">
+      <div class="row">
+        <button class="btn" id="b-prepend">+ At start</button>
+        <button class="btn" id="b-append">+ At end</button>
+        <button class="btn" id="b-insert">+ At position</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Current checkpoint</h2>
+      <dl class="info">
+        <dt>Name</dt><dd id="i-name">-</dd><dt>ID</dt><dd id="i-id">-</dd><dt>Status</dt><dd id="i-status">-</dd>
+        <dt>Delay</dt><dd id="i-delay">-</dd><dt>prev →</dt><dd id="i-prev">-</dd><dt>next →</dt><dd id="i-next">-</dd>
+      </dl>
+      <label for="f-hours">Delay hours</label><input id="f-hours" type="number" min="0" value="12">
+      <div class="row">
+        <button class="btn" data-status="on_time">On time</button>
+        <button class="btn" data-status="delayed">Delayed</button>
+        <button class="btn" data-status="inspected">Customs inspection</button>
+      </div>
+      <div class="row"><button class="btn warn" id="b-remove">🗑 Remove checkpoint</button><button class="btn" id="b-demo">Load demo</button><button class="btn" id="b-reset">Clear</button></div>
+    </section>
+    <section class="card">
+      <h2>Python being executed</h2>
+      <div class="term" id="term" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+<script type="text/x-python" id="py-shipment">
+"""International shipment traceability built on a doubly linked list.
+
+Data Structures - Doubly linked lists.
+Every checkpoint (port, customs, hub, destination) is a node with two
+pointers: next (forward in the route) and prev (backward in the route).
+Run it without a UI:  python shipment.py
+"""
+
+STATUSES = ("on_time", "delayed", "inspected")
+
+
+class Checkpoint:
+    """List node: checkpoint data plus two pointers."""
+
+    def __init__(self, cp_id, name, kind):
+        self.id = cp_id
+        self.name = name
+        self.kind = kind            # port | customs | hub | warehouse | destination
+        self.status = "on_time"     # on_time | delayed | inspected
+        self.delay_hours = 0
+        self.next = None            # following checkpoint (towards destination)
+        self.prev = None            # previous checkpoint (towards origin)
+
+
+class ShipmentRoute:
+    """Doubly linked list of checkpoints crossed by one container."""
+
+    def __init__(self):
+        self.head = None      # origin
+        self.tail = None      # destination
+        self.length = 0
+        self.current = None   # where the container is being audited
+        self._counter = 0     # ids are never reused
+
+    def _new_checkpoint(self, name, kind):
+        self._counter += 1
+        return Checkpoint(f"CP{self._counter}", name, kind)
+
+    # add to end
+    def append(self, name, kind):
+        node = self._new_checkpoint(name, kind)
+        if self.head is None:
+            self.head = node
+            self.tail = node
+            self.current = node
+        else:
+            node.prev = self.tail
+            self.tail.next = node
+            self.tail = node
+        self.length += 1
+        return node
+
+    # add to start
+    def prepend(self, name, kind):
+        node = self._new_checkpoint(name, kind)
+        if self.head is None:
+            self.head = node
+            self.tail = node
+            self.current = node
+        else:
+            node.next = self.head
+            self.head.prev = node
+            self.head = node
+        self.length += 1
+        return node
+
+    # reach an index starting from the closest end
+    def traverse_to_index(self, index):
+        if index < 0 or index >= self.length:
+            raise IndexError("No checkpoint at that position.")
+        if index <= self.length // 2:
+            node = self.head
+            for _ in range(index):
+                node = node.next
+        else:
+            node = self.tail
+            for _ in range(self.length - 1 - index):
+                node = node.prev
+        return node
+
+    # insert at an index
+    def insert(self, index, name, kind):
+        if index <= 0:
+            return self.prepend(name, kind)
+        if index >= self.length:
+            return self.append(name, kind)
+        node = self._new_checkpoint(name, kind)
+        leader = self.traverse_to_index(index - 1)
+        follower = leader.next
+        leader.next = node
+        node.prev = leader
+        node.next = follower
+        follower.prev = node
+        self.length += 1
+        return node
+
+    # delete at an index
+    def remove(self, index):
+        node = self.traverse_to_index(index)
+        if node.prev is not None:
+            node.prev.next = node.next
+        else:
+            self.head = node.next
+        if node.next is not None:
+            node.next.prev = node.prev
+        else:
+            self.tail = node.prev
+        if self.current is node:
+            self.current = node.next or node.prev
+        node.next = None
+        node.prev = None
+        self.length -= 1
+        return node
+
+    # traverse in both directions
+    def go_next(self):
+        if self.current is None or self.current.next is None:
+            return False
+        self.current = self.current.next
+        return True
+
+    def go_prev(self):
+        if self.current is None or self.current.prev is None:
+            return False
+        self.current = self.current.prev
+        return True
+
+    def go_head(self):
+        self.current = self.head
+
+    def go_tail(self):
+        self.current = self.tail
+
+    def set_status(self, node, status, hours=0):
+        if status not in STATUSES:
+            raise ValueError("Unknown status.")
+        node.status = status
+        node.delay_hours = 0 if status == "on_time" else max(0, int(hours))
+
+    # backtrace: walk backwards with prev until a delay or inspection is found
+    def investigate_backward(self):
+        steps = 0
+        node = self.current
+        while node is not None:
+            if node.status != "on_time":
+                return node, steps
+            node = node.prev
+            steps += 1
+        return None, steps
+
+    def total_delay(self):
+        total = 0
+        node = self.head
+        while node is not None:
+            total += node.delay_hours
+            node = node.next
+        return total
+
+    def index_of(self, node):
+        i = 0
+        node_at = self.head
+        while node_at is not None:
+            if node_at is node:
+                return i
+            node_at = node_at.next
+            i += 1
+        return -1
+
+    def to_text(self):
+        parts = []
+        node = self.head
+        while node is not None:
+            parts.append(node.name)
+            node = node.next
+        return " <-> ".join(parts) if parts else "(empty route)"
+
+    def print_list(self):
+        print(self.to_text())
+
+
+if __name__ == "__main__":
+    route = ShipmentRoute()
+    route.append("Port A", "port")
+    route.append("Customs B", "customs")
+    route.append("Distribution Center C", "hub")
+    route.append("Destination", "destination")
+    route.print_list()
+    route.insert(2, "Warehouse X", "warehouse")
+    route.print_list()
+    route.set_status(route.traverse_to_index(1), "inspected", 18)
+    route.go_tail()
+    found, steps = route.investigate_backward()   # walks back using prev
+    print("Issue found at", found.name, "after", steps, "steps back")
+    route.remove(2)
+    route.print_list()
+
+</script>
+<script type="text/x-python" id="py-bridge">
+# Bridge between the UI (HTML/JS) and the doubly linked list in Python.
+import json
+
+route = ShipmentRoute()
+_dump = json.dumps
+
+
+def _state(ok=True, msg="", code=""):
+    items = []
+    node = route.head
+    while node is not None:
+        items.append({
+            "id": node.id, "name": node.name, "kind": node.kind,
+            "status": node.status, "delay": node.delay_hours,
+            "prev": node.prev.name if node.prev else None,
+            "next": node.next.name if node.next else None,
+        })
+        node = node.next
+    return json.dumps({
+        "ok": ok, "msg": msg, "code": code, "items": items,
+        "length": route.length, "total_delay": route.total_delay(),
+        "current_id": route.current.id if route.current else None,
+        "current_index": route.index_of(route.current) if route.current else -1,
+    })
+
+
+def handle(action, payload_json):
+    global route
+    data = json.loads(payload_json or "{}")
+    try:
+        if action in ("append", "prepend", "insert"):
+            name = str(data["name"]).strip()[:40]
+            if not name:
+                return _state(False, "Type a checkpoint name first.")
+            kind = data["kind"]
+            if action == "append":
+                node = route.append(name, kind)
+                code = f"route.append({_dump(name)}, {_dump(kind)})"
+            elif action == "prepend":
+                node = route.prepend(name, kind)
+                code = f"route.prepend({_dump(name)}, {_dump(kind)})"
+            else:
+                index = int(data["index"])
+                node = route.insert(index, name, kind)
+                code = f"route.insert({index}, {_dump(name)}, {_dump(kind)})"
+            route.current = node
+            return _state(msg=f"{node.name} added at position {route.index_of(node)}.", code=code)
+        if action == "remove_current":
+            if route.current is None:
+                return _state(False, "There is no checkpoint to remove.")
+            index = route.index_of(route.current)
+            node = route.remove(index)
+            return _state(msg=f"{node.name} removed. Its neighbours were linked together.",
+                          code=f"route.remove({index})")
+        if action == "next":
+            moved = route.go_next()
+            return _state(moved, f"Advanced to {route.current.name}." if moved else "Already at the destination (tail).",
+                          "route.go_next()" if moved else "")
+        if action == "prev":
+            moved = route.go_prev()
+            return _state(moved, f"Traced back to {route.current.name}." if moved else "Already at the origin (head).",
+                          "route.go_prev()" if moved else "")
+        if action == "head":
+            route.go_head()
+            return _state(msg="Jumped to the origin (head).", code="route.go_head()")
+        if action == "tail":
+            route.go_tail()
+            return _state(msg="Jumped to the destination (tail).", code="route.go_tail()")
+        if action == "select":
+            index = int(data["index"])
+            route.current = route.traverse_to_index(index)
+            return _state(msg=f"Selected {route.current.name}.", code=f"route.traverse_to_index({index})")
+        if action == "status":
+            if route.current is None:
+                return _state(False, "Select a checkpoint first.")
+            hours = int(data.get("hours") or 0)
+            route.set_status(route.current, data["status"], hours)
+            return _state(msg=f"{route.current.name} marked as {data['status'].replace('_', ' ')}.",
+                          code=f"route.set_status(route.current, {_dump(data['status'])}, {hours})")
+        if action == "investigate":
+            found, steps = route.investigate_backward()
+            if found is None:
+                return _state(False, f"Walked back {steps} step(s): no delay or inspection upstream.",
+                              "route.investigate_backward()")
+            route.current = found
+            return _state(msg=f"Issue found at {found.name}, {steps} step(s) back (via prev).",
+                          code="route.investigate_backward()")
+        if action == "reset":
+            route = ShipmentRoute()
+            return _state(msg="Route cleared.", code="route = ShipmentRoute()")
+        if action == "demo":
+            route = ShipmentRoute()
+            for item in data["checkpoints"]:
+                route.append(item["name"], item["kind"])
+            route.set_status(route.traverse_to_index(1), "inspected", 26)
+            route.go_tail()
+            return _state(msg="Demo route loaded. The container is at the destination: try Investigate.",
+                          code=f"route = ShipmentRoute()\nroute.append(...)  # x{route.length} checkpoints")
+        return _state(False, "Unknown action.")
+    except IndexError:
+        return _state(False, "No checkpoint at that position.")
+    except (ValueError, KeyError, TypeError):
+        return _state(False, "Invalid data.")
+
+</script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const ICONS = {port:"⚓", customs:"🛃", hub:"🏭", warehouse:"📦", destination:"📍"};
+const STATUS_TEXT = {on_time:"On time", delayed:"Delayed", inspected:"Inspection"};
+const DEMO = [{name:"Port A", kind:"port"},{name:"Customs B", kind:"customs"},{name:"Distribution Center C", kind:"hub"},{name:"Destination", kind:"destination"}];
+let handle = null, S = null, dir = "fwd";
+const esc = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function stopHTML(c, i, s){
+  const cur = c.id === s.current_id;
+  const tag = i === 0 ? '<span class="tag">HEAD</span>' : (i === s.length - 1 ? '<span class="tag">TAIL</span>' : "");
+  const delay = c.delay ? ` · ${c.delay} h` : "";
+  return `<div class="stop${cur ? " cur" + (dir === "bwd" ? " back" : "") : ""}" data-index="${i}" tabindex="0" role="button" aria-label="${esc(c.name)}">
+    ${tag}${cur ? '<span class="box" aria-hidden="true">📦</span>' : ""}
+    <div class="ico">${ICONS[c.kind] || "📍"}</div><div class="nm">${esc(c.name)}</div><div class="id">${c.id} · pos ${i}</div>
+    <span class="chip ${c.status}">${STATUS_TEXT[c.status]}${delay}</span></div>`;
+}
+const linkHTML = () => '<div class="link"><i class="n">next →</i><i class="p">← prev</i></div>';
+
+function render(s){
+  S = s;
+  $("#s-len").textContent = s.length;
+  $("#s-pos").textContent = s.current_index >= 0 ? `${s.current_index + 1}/${s.length}` : "-";
+  $("#s-delay").textContent = s.total_delay + " h";
+  $("#route").innerHTML = s.items.length
+    ? s.items.map((c, i) => stopHTML(c, i, s) + (i < s.items.length - 1 ? linkHTML() : "")).join("")
+    : '<div class="empty">The route is empty. Add a checkpoint or load the demo.</div>';
+  const cur = s.items[s.current_index];
+  $("#i-name").textContent = cur ? cur.name : "-";
+  $("#i-id").textContent = cur ? cur.id : "-";
+  $("#i-status").textContent = cur ? STATUS_TEXT[cur.status] : "-";
+  $("#i-delay").textContent = cur ? cur.delay + " h" : "-";
+  $("#i-prev").textContent = cur ? (cur.prev || "None (head)") : "-";
+  $("#i-next").textContent = cur ? (cur.next || "None (tail)") : "-";
+  const m = $("#mode"); m.className = "mode " + dir;
+  m.textContent = dir === "fwd" ? "FORWARD AUDIT" : "BACKTRACE";
+  $("#b-next").disabled = !cur || s.current_index >= s.length - 1;
+  $("#b-prev").disabled = !cur || s.current_index <= 0;
+  const el = document.querySelector(".stop.cur");
+  if (el) el.scrollIntoView({behavior:"smooth", inline:"center", block:"nearest"});
+}
+
+function call(action, payload){
+  if (!handle) return;
+  const r = JSON.parse(handle(action, JSON.stringify(payload || {})));
+  if (r.ok && (action === "prev" || action === "investigate")) dir = "bwd";
+  if (r.ok && (action === "next" || action === "head" || action === "demo")) dir = "fwd";
+  render(r);
+  const msg = $("#msg"); msg.textContent = r.msg; msg.classList.toggle("err", !r.ok);
+  if (r.code){ const t = $("#term"); t.innerHTML += `<span class="pr">&gt;&gt;&gt; </span>${esc(r.code)}\n`; t.scrollTop = t.scrollHeight; }
+}
+
+function form(){ return {name: $("#f-name").value, kind: $("#f-kind").value, index: $("#f-index").value}; }
+function bindEvents(){
+  $("#b-next").onclick = () => call("next");
+  $("#b-prev").onclick = () => call("prev");
+  $("#b-head").onclick = () => call("head");
+  $("#b-tail").onclick = () => call("tail");
+  $("#b-inv").onclick = () => call("investigate");
+  $("#b-append").onclick = () => { call("append", form()); $("#f-name").value = ""; };
+  $("#b-prepend").onclick = () => { call("prepend", form()); $("#f-name").value = ""; };
+  $("#b-insert").onclick = () => { call("insert", form()); $("#f-name").value = ""; };
+  $("#b-remove").onclick = () => call("remove_current");
+  $("#b-reset").onclick = () => call("reset");
+  $("#b-demo").onclick = () => call("demo", {checkpoints: DEMO});
+  document.querySelectorAll("[data-status]").forEach(b => b.onclick = () => call("status", {status: b.dataset.status, hours: $("#f-hours").value}));
+  const pick = e => { const s = e.target.closest(".stop"); if (s) call("select", {index: s.dataset.index}); };
+  $("#route").onclick = pick;
+  $("#route").onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); pick(e); } };
+}
+
+async function start(){
+  bindEvents();
+  render({items: [], length: 0, total_delay: 0, current_id: null, current_index: -1});
+  try{
+    const py = await loadPyodide();
+    py.globals.set("__name__", "shipment");   // skips the test block at the bottom of shipment.py
+    py.runPython($("#py-shipment").textContent);
+    py.runPython($("#py-bridge").textContent);
+    handle = py.globals.get("handle");
+    $("#loader").hidden = true;
+    call("demo", {checkpoints: DEMO});
+  }catch(err){
+    $("#spinner").style.display = "none";
+    $("#loader-text").textContent = "Python could not be loaded. The first time you need an internet connection; check your network and reopen this page.";
+    console.error(err);
+  }
+}
+start();
+</script>
+</body>
+</html>
